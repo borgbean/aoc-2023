@@ -4,17 +4,22 @@ function doIt(input) {
     input = input.split('\n');
     
     let sum = 0;
+    let dp = new Float64Array(1).fill(-1);
 
     for(let line of input) {
-        let dp = [];
         let [data, groups] = line.split(' ');
         data = data.replace(/\.+/g, '.');
         
         data = data + ('?' + data).repeat(4);
         groups = groups + (',' + groups).repeat(4);
-
+        
         groups = groups.split(',').map(Number);
         
+        let dpLen = groups.length*data.length;
+        if(dpLen > dp.length) {
+            dp = new Float64Array(dpLen);
+        }
+        dp.fill(-1);
         var tmp = dfs(dp, groups, 0, data, 0);
         sum += tmp;
 
@@ -24,7 +29,7 @@ function doIt(input) {
 }
 function dfs(dp, groups, groupL, data, dataL) {
     let dpIdx = (groupL*data.length) + dataL;
-    if(dpIdx in dp) {
+    if(dp[dpIdx] > -1) {
         return dp[dpIdx];
     }
     
@@ -73,7 +78,5 @@ function dfs(dp, groups, groupL, data, dataL) {
     return sum;
 }
 
-console.time()
 console.log(doIt(input));
-console.timeEnd()
 
