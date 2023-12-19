@@ -112,11 +112,11 @@
                     // ctx.setLineDash([5, 15]);
                     ctx.moveTo(pxPerJ * j, 0);
                     ctx.lineTo(pxPerJ*j, canvas.height);
-                    ctx.stroke();
+                    
 
                 }
             }
-
+            ctx.stroke();
             ctx.setLineDash([]);
             ctx.beginPath();
             ctx.moveTo(pxPerJ*j, pxPerI*i);
@@ -206,7 +206,6 @@
                     if(prevEdgeStart) {
                         ctx.moveTo(prevEdgeStart[1] * pxPerJ, prevEdgeStart[0] * pxPerI);
                         ctx.lineTo(intersect[1] * pxPerJ, intersect[0] * pxPerI);
-                        ctx.stroke();
                     }
 
                     prevEdgeStart = intersect;
