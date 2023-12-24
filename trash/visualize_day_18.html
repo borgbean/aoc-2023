@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <canvas ></canvas>
+    <!-- <canvas style="width: 100vw; height: 100vh;"></canvas> -->
+    <!-- <canvas style="width: 100vw; height: 100vh;"></canvas> -->
+    <!-- <canvas width="2000px" height="2000px"></canvas> -->
+
+    <script>
+        let canvas = document.querySelector('canvas');
+        
+
+        let directions = [
+            [-1, 0], // UP
+            [1, 0], // DOWN
+            [0, -1], // LEFT
+            [0, 1], // RIGHT
+        ];
+        let directionNames = new Map([['U', 0], ['D', 1], ['L', 2], ['R', 3]]);
+        let directionOffsetClockwise = [
+            [[.5, -.5], [-.5, -.5]],
+            [[-.5, .5], [.5, .5]],
+            [[.5, .5], [.5, -.5]],
+            [[-.5, -.5], [-.5, .5]]
+        ];
+        let directionOffsetAntiClockwise = [
+            [[.5, .5], [-.5, .5]],
+            [[-.5, -.5], [.5, -.5]],
+            [[-.5, .5], [-.5, -.5]],
+            [[.5, -.5], [.5, .5]]
+        ];
+
+
+        /**
+         * 
+         * @param {string} rawInput 
+         * @returns 
+         */
+        function doIt(rawInput) {
+            let lines = rawInput.split('\n');
+
+            let area = 0
+            let perimeter = 0;
+
+            let i = 0;
+            let j = 0;
+
+            let maxI = 0;
+            let maxJ = 0;
+            let minI = 0;
+            let minJ = 0;
+
+            let lastDirection = null;
+            let points = [];
+
+            for (let line of lines) {
+                let [directionStr, distanceStr, color] = line.split(' ');
+                let direction = directions[directionNames.get(directionStr)];
+                let distance = Number(distanceStr);
+
+                let newI = i + direction[0] * distance;
+                let newJ = j + direction[1] * distance;
+
+                minI = Math.min(minI, newI);
+                minJ = Math.min(minJ, newJ);
+                maxI = Math.max(maxI, newI);
+                maxJ = Math.max(maxJ, newJ);
+
+                i = newI;
+                j = newJ;
+            }
+
+            let offsetI = 1 + -minI;
+            let offsetJ = 1 + -minJ;
+            
+            i = offsetI;
+            j = offsetJ;
+
+            canvas.height = Math.max(1000, (maxI-minI) * 25);
+            canvas.width = Math.max(1000, (maxJ-minJ) * 25);
+
+            let pxPerI = 2*(canvas.height/(2*(2+maxI-minI)));
+            let pxPerJ = 2*(canvas.width/(2*(2+maxJ-minJ)));
+            let ctx = canvas.getContext('2d');
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'black';
+
+            drawPolygon(ctx, lines, offsetI, offsetJ, pxPerI, pxPerJ);
+
+
+
+            //draw grid(todo allow disabling)
+            ctx.setLineDash([5, 15]);
+            ctx.setLineDash([1,5]);
+            for(let i = .5; i <= (2+maxI-minI); ++i) {
+
+                ctx.beginPath();
+                ctx.moveTo(0, pxPerI*i);
+                ctx.lineTo(canvas.width, pxPerI*i);
+                ctx.stroke();
+                for(let j = .5; j <= (2+maxJ-minJ); ++j) {
+
+                    ctx.beginPath();
+                    // ctx.setLineDash([5, 15]);
+                    ctx.moveTo(pxPerJ * j, 0);
+                    ctx.lineTo(pxPerJ*j, canvas.height);
+                    ctx.stroke();
+
+                }
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(pxPerJ*j, pxPerI*i);
+            ctx.strokeStyle = 'red';
+            
+
+            drawEmbiggened(ctx, lines, offsetI, offsetJ, pxPerI, pxPerJ, 'red', polygonIsClockwise(lines));
+
+
+        }
+
+        function drawPolygon(ctx, lines, offsetI, offsetJ, pxPerI, pxPerJ, color) {
+            let i = offsetI;
+            let j = offsetJ;
+            
+            ctx.strokeStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(pxPerJ*j, pxPerI*i);
+
+            let startIdx = 0;
+
+                    
+            for(let line of lines) {
+                let [directionStr, distanceStr, color] = line.split(' ');
+                let directionOrd = directionNames.get(directionStr);
+                let direction = directions[directionOrd];
+                let distance = Number(distanceStr);
+
+                let newI = i + direction[0]*distance;
+                let newJ = j + direction[1]*distance;
+
+
+                ctx.lineTo((newJ) * pxPerJ, (newI) * pxPerI);
+
+
+                i = newI;
+                j = newJ;
+                lastDirection = direction;
+
+            }
+            ctx.stroke();
+        }
+
+        function drawEmbiggened(ctx, lines, offsetI, offsetJ, pxPerI, pxPerJ, color, clockwise) {
+
+            let i = offsetI;
+            let j = offsetJ;
+            
+            ctx.strokeStyle = color;
+            ctx.beginPath();
+
+            let drewFirstLine = false;
+
+            let edges = [];
+
+
+            let directionOffsets = clockwise ? directionOffsetClockwise : directionOffsetAntiClockwise;
+
+            let firstEdge = null;
+            let prevEdgeEnd = null;
+            let prevEdgeStart = null;
+                    
+            for(let lineIdx = 0; lineIdx < (lines.length+2); ++lineIdx) {
+                let line = lines[lineIdx % lines.length];
+                let [directionStr, distanceStr, color] = line.split(' ');
+                let directionOrd = directionNames.get(directionStr);
+                let direction = directions[directionOrd];
+                let distance = Number(distanceStr);
+
+                let [beginOffset, endOffset] = directionOffsets[directionOrd];
+                curOffset = endOffset;
+                
+                let newI = i + direction[0]*distance;
+                let newJ = j + direction[1]*distance;
+
+                let newEdgeEnd = [newI + endOffset[0], newJ + endOffset[1]];
+
+                if(firstEdge === null) {
+                    firstEdge = newEdgeEnd;
+                    prevEdgeEnd = newEdgeEnd;
+                } else {
+                    //intersect cur edge START with prev edge ENDING
+                    let curEdgeStart = [i + beginOffset[0], j + beginOffset[1]];
+                    let intersect = getIntersect(directionOrd, prevEdgeEnd, curEdgeStart);
+
+
+                    if(prevEdgeStart) {
+                        ctx.moveTo(prevEdgeStart[1] * pxPerJ, prevEdgeStart[0] * pxPerI);
+                        ctx.lineTo(intersect[1] * pxPerJ, intersect[0] * pxPerI);
+                    }
+
+                    prevEdgeStart = intersect;
+                    prevEdgeEnd = newEdgeEnd;
+                }
+
+                drewFirstLine = true;
+
+                i = newI;
+                j = newJ;
+                lastDirection = direction;
+
+            }
+            ctx.stroke();
+        }
+
+        function polygonIsClockwise(lines) {
+            let i = 0;
+            let j = 0;
+            let area = 0;
+
+            for (let line of lines) {
+                let [directionStr, distanceStr, color] = line.split(' ');
+                let direction = directions[directionNames.get(directionStr)];
+                let distance = Number(distanceStr);
+
+                let newI = i + direction[0] * distance;
+                let newJ = j + direction[1] * distance;
+
+                area += (newJ-j)*(newI+i);
+
+                i = newI;
+                j = newJ;
+            }
+
+
+            return area < 0;
+        }
+
+        function getIntersect(newDirection, oldEdgeEnd, newEdgeStart) {
+            let intersect = [];
+            if(newDirection < 2) {
+                // up-down
+                intersect = [oldEdgeEnd[0], newEdgeStart[1]];
+            } else {
+                // left-right
+                intersect = [newEdgeStart[0], oldEdgeEnd[1]];
+            }
+
+            return intersect;
+        }
+
+        console.time()
+        console.log(doIt(input))
+        console.timeEnd()
+    </script>
+
+    <textarea id="input" placeholder="input goes here"></textarea>
+    <button onclick="doIt(document.querySelector('#input').value)">Do it</button>
+</body>
+
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "aoc2023",
+  "version": "1.0.0",
+  "description": "",
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "heap-js": "^2.3.0"
+  }
+}
